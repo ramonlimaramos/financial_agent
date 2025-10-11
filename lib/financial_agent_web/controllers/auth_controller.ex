@@ -1,13 +1,25 @@
 defmodule FinancialAgentWeb.AuthController do
   use FinancialAgentWeb, :controller
 
-  plug Ueberauth
+  # Apply Ueberauth plug only for non-HubSpot providers
+  plug :ueberauth_for_google when action in [:request, :callback]
 
   alias FinancialAgent.Accounts
   alias FinancialAgent.OAuth.HubSpot, as: HubSpotOAuth
   alias FinancialAgent.Workers.{GmailSyncWorker, HubSpotSyncWorker}
 
   require Logger
+
+  # Custom plug to conditionally apply Ueberauth only for Google
+  defp ueberauth_for_google(%{params: %{"provider" => "hubspot"}} = conn, _opts) do
+    # Skip Ueberauth for HubSpot - we handle it manually
+    conn
+  end
+
+  defp ueberauth_for_google(conn, _opts) do
+    # Apply Ueberauth for all other providers (Google)
+    Ueberauth.call(conn, Ueberauth.init([]))
+  end
 
   @doc """
   Initiates OAuth flow by redirecting to the provider.
