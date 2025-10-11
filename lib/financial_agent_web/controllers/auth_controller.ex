@@ -4,16 +4,27 @@ defmodule FinancialAgentWeb.AuthController do
   plug Ueberauth
 
   alias FinancialAgent.Accounts
+  alias FinancialAgent.OAuth.HubSpot, as: HubSpotOAuth
   alias FinancialAgent.Workers.{GmailSyncWorker, HubSpotSyncWorker}
 
   require Logger
 
   @doc """
   Initiates OAuth flow by redirecting to the provider.
-  This is handled automatically by Ueberauth.
+  For Google, this is handled by Ueberauth.
+  For HubSpot, we handle it directly since there's no Ueberauth strategy.
   """
+  def request(conn, %{"provider" => "hubspot"}) do
+    redirect_uri = unverified_url(conn, "/auth/hubspot/callback")
+    state = generate_state()
+
+    conn
+    |> put_session(:oauth_state, state)
+    |> redirect(external: HubSpotOAuth.authorize_url(redirect_uri, state))
+  end
+
   def request(conn, %{"provider" => _provider}) do
-    # Ueberauth handles the redirect
+    # Ueberauth handles Google redirect
     conn
   end
 
@@ -22,6 +33,22 @@ defmodule FinancialAgentWeb.AuthController do
 
   Creates or updates user and credentials, then enqueues sync jobs.
   """
+  def callback(conn, %{"provider" => "hubspot", "code" => code} = params) do
+    stored_state = get_session(conn, :oauth_state)
+    received_state = Map.get(params, "state")
+
+    # Verify CSRF state
+    if stored_state != received_state do
+      Logger.error("HubSpot OAuth state mismatch")
+
+      conn
+      |> put_flash(:error, "Authentication failed: invalid state")
+      |> redirect(to: "/")
+    else
+      handle_hubspot_callback(conn, code)
+    end
+  end
+
   def callback(%{assigns: %{ueberauth_failure: failure}} = conn, %{"provider" => provider}) do
     Logger.error("Auth callback failure for #{provider}: #{inspect(failure)}")
 
@@ -128,5 +155,83 @@ defmodule FinancialAgentWeb.AuthController do
   defp enqueue_sync_jobs(_user, _provider) do
     Logger.warning("No sync worker configured for provider")
     {:ok, []}
+  end
+
+  # HubSpot OAuth helpers
+
+  defp handle_hubspot_callback(conn, code) do
+    redirect_uri = unverified_url(conn, "/auth/hubspot/callback")
+
+    case HubSpotOAuth.get_token(code, redirect_uri) do
+      {:ok, token_response} ->
+        # For HubSpot, we don't get user email from the OAuth response
+        # We'll need to fetch it from the user info API or use a default
+        # For now, create/get user from session or use a placeholder
+        process_hubspot_token(conn, token_response)
+
+      {:error, reason} ->
+        Logger.error("HubSpot token exchange failed: #{inspect(reason)}")
+
+        conn
+        |> put_flash(:error, "Failed to authenticate with HubSpot")
+        |> redirect(to: "/")
+    end
+  end
+
+  defp process_hubspot_token(conn, token_response) do
+    # TODO: Fetch user email from HubSpot API if needed
+    # For now, we'll require the user to be logged in first with Google
+    case get_session(conn, :user_id) do
+      nil ->
+        conn
+        |> put_flash(:error, "Please log in with Google first before connecting HubSpot")
+        |> redirect(to: "/")
+
+      user_id ->
+        store_hubspot_credential(conn, user_id, token_response)
+    end
+  end
+
+  defp store_hubspot_credential(conn, user_id, token_response) do
+    attrs = %{
+      provider: "hubspot",
+      access_token: token_response["access_token"],
+      refresh_token: token_response["refresh_token"],
+      expires_at: calculate_expires_at(token_response["expires_in"])
+    }
+
+    case Accounts.get_user(user_id) do
+      nil ->
+        conn
+        |> put_flash(:error, "User not found")
+        |> redirect(to: "/")
+
+      user ->
+        case Accounts.store_credential(user, attrs) do
+          {:ok, _credential} ->
+            {:ok, _jobs} = enqueue_sync_jobs(user, "hubspot")
+
+            conn
+            |> put_flash(:info, "Successfully connected HubSpot!")
+            |> redirect(to: "/")
+
+          {:error, changeset} ->
+            Logger.error("Failed to store HubSpot credential: #{inspect(changeset.errors)}")
+
+            conn
+            |> put_flash(:error, "Failed to save HubSpot connection")
+            |> redirect(to: "/")
+        end
+    end
+  end
+
+  defp calculate_expires_at(expires_in) when is_integer(expires_in) do
+    DateTime.utc_now() |> DateTime.add(expires_in, :second)
+  end
+
+  defp calculate_expires_at(_), do: nil
+
+  defp generate_state do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
   end
 end
