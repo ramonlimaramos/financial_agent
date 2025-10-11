@@ -20,6 +20,16 @@ defmodule FinancialAgentWeb.Router do
     get "/", PageController, :home
   end
 
+  # OAuth authentication routes
+  scope "/auth", FinancialAgentWeb do
+    pipe_through :browser
+
+    get "/:provider", AuthController, :request
+    get "/:provider/callback", AuthController, :callback
+    post "/:provider/callback", AuthController, :callback
+    delete "/logout", AuthController, :delete
+  end
+
   # Other scopes may use custom stacks.
   # scope "/api", FinancialAgentWeb do
   #   pipe_through :api

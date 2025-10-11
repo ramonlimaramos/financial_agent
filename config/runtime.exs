@@ -114,4 +114,38 @@ if config_env() == :prod do
   #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+
+  # Configure OAuth providers
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: System.get_env("GOOGLE_CLIENT_ID"),
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+  # Configure OpenAI
+  config :openai,
+    api_key: System.get_env("OPENAI_API_KEY"),
+    organization_key: System.get_env("OPENAI_ORG_KEY")
+end
+
+# Load environment variables for all environments
+if config_env() in [:dev, :test] do
+  # Load .env file in development and test
+  if File.exists?(".env") do
+    File.stream!(".env")
+    |> Stream.map(&String.trim/1)
+    |> Stream.reject(&(String.starts_with?(&1, "#") || &1 == ""))
+    |> Enum.each(fn line ->
+      [key, value] = String.split(line, "=", parts: 2)
+      System.put_env(key, value)
+    end)
+  end
+
+  # Configure OAuth for dev/test
+  config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+    client_id: System.get_env("GOOGLE_CLIENT_ID"),
+    client_secret: System.get_env("GOOGLE_CLIENT_SECRET")
+
+  # Configure OpenAI
+  config :openai,
+    api_key: System.get_env("OPENAI_API_KEY"),
+    organization_key: System.get_env("OPENAI_ORG_KEY")
 end

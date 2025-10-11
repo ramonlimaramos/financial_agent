@@ -10,12 +10,13 @@ defmodule FinancialAgent.Application do
     children = [
       FinancialAgentWeb.Telemetry,
       FinancialAgent.Repo,
+      FinancialAgent.Vault,
       {DNSCluster, query: Application.get_env(:financial_agent, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FinancialAgent.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: FinancialAgent.Finch},
-      # Start a worker by calling: FinancialAgent.Worker.start_link(arg)
-      # {FinancialAgent.Worker, arg},
+      # Start Oban for background jobs
+      {Oban, Application.fetch_env!(:financial_agent, Oban)},
       # Start to serve requests, typically the last entry
       FinancialAgentWeb.Endpoint
     ]
