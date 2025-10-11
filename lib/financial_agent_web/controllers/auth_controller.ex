@@ -173,9 +173,11 @@ defmodule FinancialAgentWeb.AuthController do
 
   defp handle_hubspot_callback(conn, code) do
     redirect_uri = unverified_url(conn, "/auth/hubspot/callback")
+    Logger.info("HubSpot callback - exchanging code for token. Redirect URI: #{redirect_uri}")
 
     case HubSpotOAuth.get_token(code, redirect_uri) do
       {:ok, token_response} ->
+        Logger.info("HubSpot token exchange successful")
         # For HubSpot, we don't get user email from the OAuth response
         # We'll need to fetch it from the user info API or use a default
         # For now, create/get user from session or use a placeholder
@@ -193,18 +195,25 @@ defmodule FinancialAgentWeb.AuthController do
   defp process_hubspot_token(conn, token_response) do
     # TODO: Fetch user email from HubSpot API if needed
     # For now, we'll require the user to be logged in first with Google
-    case get_session(conn, :user_id) do
+    user_id = get_session(conn, :user_id)
+    Logger.info("Processing HubSpot token. User ID from session: #{inspect(user_id)}")
+
+    case user_id do
       nil ->
+        Logger.warning("No user_id in session for HubSpot OAuth")
         conn
         |> put_flash(:error, "Please log in with Google first before connecting HubSpot")
         |> redirect(to: "/")
 
       user_id ->
+        Logger.info("Storing HubSpot credential for user #{user_id}")
         store_hubspot_credential(conn, user_id, token_response)
     end
   end
 
   defp store_hubspot_credential(conn, user_id, token_response) do
+    Logger.info("Token response keys: #{inspect(Map.keys(token_response))}")
+
     attrs = %{
       provider: "hubspot",
       access_token: token_response["access_token"],
@@ -212,15 +221,21 @@ defmodule FinancialAgentWeb.AuthController do
       expires_at: calculate_expires_at(token_response["expires_in"])
     }
 
+    Logger.info("Credential attrs: #{inspect(attrs, charlists: :as_lists)}")
+
     case Accounts.get_user(user_id) do
       nil ->
+        Logger.error("User #{user_id} not found in database")
         conn
         |> put_flash(:error, "User not found")
         |> redirect(to: "/")
 
       user ->
+        Logger.info("Found user: #{user.email}")
+
         case Accounts.store_credential(user, attrs) do
-          {:ok, _credential} ->
+          {:ok, credential} ->
+            Logger.info("Successfully stored HubSpot credential #{credential.id}")
             {:ok, _jobs} = enqueue_sync_jobs(user, "hubspot")
 
             conn

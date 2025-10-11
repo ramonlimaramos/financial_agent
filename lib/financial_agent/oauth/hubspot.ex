@@ -71,7 +71,11 @@ defmodule FinancialAgent.OAuth.HubSpot do
       code: code
     }
 
-    case HTTPoison.post(@token_url, Jason.encode!(body), [{"Content-Type", "application/json"}]) do
+    # HubSpot expects application/x-www-form-urlencoded, not JSON
+    encoded_body = URI.encode_query(body)
+    headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
+
+    case HTTPoison.post(@token_url, encoded_body, headers) do
       {:ok, %{status_code: 200, body: response_body}} ->
         {:ok, Jason.decode!(response_body)}
 
@@ -104,7 +108,11 @@ defmodule FinancialAgent.OAuth.HubSpot do
       refresh_token: refresh_token
     }
 
-    case HTTPoison.post(@token_url, Jason.encode!(body), [{"Content-Type", "application/json"}]) do
+    # HubSpot expects application/x-www-form-urlencoded, not JSON
+    encoded_body = URI.encode_query(body)
+    headers = [{"Content-Type", "application/x-www-form-urlencoded"}]
+
+    case HTTPoison.post(@token_url, encoded_body, headers) do
       {:ok, %{status_code: 200, body: response_body}} ->
         {:ok, Jason.decode!(response_body)}
 
