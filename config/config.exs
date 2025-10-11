@@ -67,7 +67,8 @@ config :ueberauth, Ueberauth,
     google: {Ueberauth.Strategy.Google, [
       default_scope: "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
       hd: nil
-    ]}
+    ]},
+    hubspot: {Ueberauth.Strategy.Identity, []}
   ]
 
 # Configure Oban for background jobs
