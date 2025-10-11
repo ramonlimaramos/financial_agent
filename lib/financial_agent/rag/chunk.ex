@@ -12,7 +12,7 @@ defmodule FinancialAgent.RAG.Chunk do
           content: String.t(),
           source: String.t(),
           source_id: String.t(),
-          # embedding: Pgvector.t() | nil,  # Temporarily disabled
+          embedding: Pgvector.t() | nil,
           metadata: map(),
           inserted_at: DateTime.t(),
           updated_at: DateTime.t()
@@ -25,8 +25,7 @@ defmodule FinancialAgent.RAG.Chunk do
     field :content, :string
     field :source, :string
     field :source_id, :string
-    # Temporarily commented out until pgvector is enabled on database
-    # field :embedding, Pgvector.Ecto.Vector
+    field :embedding, Pgvector.Ecto.Vector
     field :metadata, :map, default: %{}
 
     belongs_to :user, FinancialAgent.Accounts.User
@@ -40,8 +39,7 @@ defmodule FinancialAgent.RAG.Chunk do
   @spec changeset(t(), map()) :: Ecto.Changeset.t()
   def changeset(chunk, attrs) do
     chunk
-    # Removed :embedding from cast until pgvector is enabled
-    |> cast(attrs, [:user_id, :content, :source, :source_id, :metadata])
+    |> cast(attrs, [:user_id, :content, :source, :source_id, :embedding, :metadata])
     |> validate_required([:user_id, :content, :source, :source_id])
     |> validate_inclusion(:source, ["gmail", "hubspot"])
     |> unique_constraint([:user_id, :source, :source_id])

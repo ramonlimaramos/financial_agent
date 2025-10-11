@@ -18,8 +18,8 @@ defmodule FinancialAgent.Repo.Migrations.CreateChunks do
     create index(:chunks, [:source])
     create unique_index(:chunks, [:user_id, :source, :source_id])
 
-    # Create ivfflat index for vector similarity search
-    execute "CREATE INDEX chunks_embedding_idx ON chunks USING ivfflat (embedding vector_cosine_ops)",
+    # Create vector similarity search index
+    execute "CREATE INDEX chunks_embedding_idx ON chunks USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100)",
             "DROP INDEX IF EXISTS chunks_embedding_idx"
   end
 end
