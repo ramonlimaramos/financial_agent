@@ -288,7 +288,8 @@ defmodule FinancialAgent.Clients.HubSpotClient do
 
   # Private functions
 
-  defp format_name(%{firstname: first, lastname: last}) when is_binary(first) and is_binary(last) do
+  defp format_name(%{firstname: first, lastname: last})
+       when is_binary(first) and is_binary(last) do
     "#{first} #{last}"
   end
 

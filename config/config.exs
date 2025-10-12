@@ -64,10 +64,13 @@ config :phoenix, :json_library, Jason
 # Configure Ueberauth for OAuth
 config :ueberauth, Ueberauth,
   providers: [
-    google: {Ueberauth.Strategy.Google, [
-      default_scope: "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
-      hd: nil
-    ]}
+    google:
+      {Ueberauth.Strategy.Google,
+       [
+         default_scope:
+           "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
+         hd: nil
+       ]}
     # HubSpot uses custom OAuth implementation, not Ueberauth
   ]
 
@@ -83,7 +86,9 @@ config :financial_agent, Oban,
 # Configure Cloak
 config :financial_agent, FinancialAgent.Vault,
   ciphers: [
-    default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: Base.decode64!("REp4S0M3SWlvZE1ValFNT1FWV0pxU0dIaHdlTDBvak4=")}
+    default:
+      {Cloak.Ciphers.AES.GCM,
+       tag: "AES.GCM.V1", key: Base.decode64!("REp4S0M3SWlvZE1ValFNT1FWV0pxU0dIaHdlTDBvak4=")}
   ]
 
 # Configure Tesla to suppress deprecation warning

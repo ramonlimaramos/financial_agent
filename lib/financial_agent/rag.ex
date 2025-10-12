@@ -25,7 +25,8 @@ defmodule FinancialAgent.RAG do
   @doc """
   Updates a chunk's embedding.
   """
-  @spec update_chunk_embedding(Chunk.t(), Pgvector.t()) :: {:ok, Chunk.t()} | {:error, Ecto.Changeset.t()}
+  @spec update_chunk_embedding(Chunk.t(), Pgvector.t()) ::
+          {:ok, Chunk.t()} | {:error, Ecto.Changeset.t()}
   def update_chunk_embedding(%Chunk{} = chunk, embedding) do
     chunk
     |> Chunk.update_embedding(embedding)

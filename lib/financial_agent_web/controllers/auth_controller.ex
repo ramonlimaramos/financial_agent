@@ -12,7 +12,7 @@ defmodule FinancialAgentWeb.AuthController do
 
   alias FinancialAgent.Accounts
   alias FinancialAgent.OAuth.HubSpot, as: HubSpotOAuth
-  alias FinancialAgent.Workers.{GmailSyncWorker, HubSpotSyncWorker}
+  alias FinancialAgent.Workers.{CalendarSyncWorker, GmailSyncWorker, HubSpotSyncWorker}
 
   require Logger
 
@@ -195,7 +195,10 @@ defmodule FinancialAgentWeb.AuthController do
 
   @spec enqueue_sync_jobs(Accounts.User.t(), String.t()) :: {:ok, list()} | {:error, term()}
   defp enqueue_sync_jobs(user, @provider_google) do
-    enqueue_worker(user, GmailSyncWorker, "Gmail")
+    with {:ok, gmail_jobs} <- enqueue_worker(user, GmailSyncWorker, "Gmail"),
+         {:ok, calendar_jobs} <- enqueue_worker(user, CalendarSyncWorker, "Calendar") do
+      {:ok, gmail_jobs ++ calendar_jobs}
+    end
   end
 
   defp enqueue_sync_jobs(user, @provider_hubspot) do
