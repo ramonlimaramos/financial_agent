@@ -68,6 +68,7 @@ config :ueberauth, Ueberauth,
       default_scope: "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
       hd: nil
     ]}
+    # HubSpot uses custom OAuth implementation, not Ueberauth
   ]
 
 # Configure Oban for background jobs

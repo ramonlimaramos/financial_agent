@@ -8,8 +8,11 @@ defmodule FinancialAgentWeb.Endpoint do
     store: :cookie,
     key: "_financial_agent_key",
     signing_salt: "Owbav7ap",
+    encryption_salt: "SessionEncryptionSalt",
     same_site: "Lax",
-    max_age: 24 * 60 * 60
+    secure: true,
+    max_age: 24 * 60 * 60,
+    http_only: true
   ]
 
   socket "/live", Phoenix.LiveView.Socket,

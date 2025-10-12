@@ -49,3 +49,12 @@ tmp/
 
 # Test coverage
 coverage.xml
+
+
+*.key
+*_key
+client_secret_*.json
+*credentials*.json
+
+
+.clinerules

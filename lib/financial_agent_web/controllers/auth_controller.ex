@@ -1,19 +1,42 @@
 defmodule FinancialAgentWeb.AuthController do
   use FinancialAgentWeb, :controller
 
-  plug Ueberauth
+  # Apply Ueberauth plug only for non-HubSpot providers
+  plug :ueberauth_for_google when action in [:request, :callback]
 
   alias FinancialAgent.Accounts
+  alias FinancialAgent.OAuth.HubSpot, as: HubSpotOAuth
   alias FinancialAgent.Workers.{GmailSyncWorker, HubSpotSyncWorker}
 
   require Logger
 
+  # Custom plug to conditionally apply Ueberauth only for Google
+  defp ueberauth_for_google(%{params: %{"provider" => "hubspot"}} = conn, _opts) do
+    # Skip Ueberauth for HubSpot - we handle it manually
+    conn
+  end
+
+  defp ueberauth_for_google(conn, _opts) do
+    # Apply Ueberauth for all other providers (Google)
+    Ueberauth.call(conn, Ueberauth.init([]))
+  end
+
   @doc """
   Initiates OAuth flow by redirecting to the provider.
-  This is handled automatically by Ueberauth.
+  For Google, this is handled by Ueberauth.
+  For HubSpot, we handle it directly since there's no Ueberauth strategy.
   """
+  def request(conn, %{"provider" => "hubspot"}) do
+    redirect_uri = unverified_url(conn, "/auth/hubspot/callback")
+    state = generate_state()
+
+    conn
+    |> put_session(:oauth_state, state)
+    |> redirect(external: HubSpotOAuth.authorize_url(redirect_uri, state))
+  end
+
   def request(conn, %{"provider" => _provider}) do
-    # Ueberauth handles the redirect
+    # Ueberauth handles Google redirect
     conn
   end
 
@@ -22,6 +45,22 @@ defmodule FinancialAgentWeb.AuthController do
 
   Creates or updates user and credentials, then enqueues sync jobs.
   """
+  def callback(conn, %{"provider" => "hubspot", "code" => code} = params) do
+    stored_state = get_session(conn, :oauth_state)
+    received_state = Map.get(params, "state")
+
+    # Verify CSRF state
+    if stored_state != received_state do
+      Logger.error("HubSpot OAuth state mismatch")
+
+      conn
+      |> put_flash(:error, "Authentication failed: invalid state")
+      |> redirect(to: "/")
+    else
+      handle_hubspot_callback(conn, code)
+    end
+  end
+
   def callback(%{assigns: %{ueberauth_failure: failure}} = conn, %{"provider" => provider}) do
     Logger.error("Auth callback failure for #{provider}: #{inspect(failure)}")
 
@@ -128,5 +167,98 @@ defmodule FinancialAgentWeb.AuthController do
   defp enqueue_sync_jobs(_user, _provider) do
     Logger.warning("No sync worker configured for provider")
     {:ok, []}
+  end
+
+  # HubSpot OAuth helpers
+
+  defp handle_hubspot_callback(conn, code) do
+    redirect_uri = unverified_url(conn, "/auth/hubspot/callback")
+    Logger.info("HubSpot callback - exchanging code for token. Redirect URI: #{redirect_uri}")
+
+    case HubSpotOAuth.get_token(code, redirect_uri) do
+      {:ok, token_response} ->
+        Logger.info("HubSpot token exchange successful")
+        # For HubSpot, we don't get user email from the OAuth response
+        # We'll need to fetch it from the user info API or use a default
+        # For now, create/get user from session or use a placeholder
+        process_hubspot_token(conn, token_response)
+
+      {:error, reason} ->
+        Logger.error("HubSpot token exchange failed: #{inspect(reason)}")
+
+        conn
+        |> put_flash(:error, "Failed to authenticate with HubSpot")
+        |> redirect(to: "/")
+    end
+  end
+
+  defp process_hubspot_token(conn, token_response) do
+    # TODO: Fetch user email from HubSpot API if needed
+    # For now, we'll require the user to be logged in first with Google
+    user_id = get_session(conn, :user_id)
+    Logger.info("Processing HubSpot token. User ID from session: #{inspect(user_id)}")
+
+    case user_id do
+      nil ->
+        Logger.warning("No user_id in session for HubSpot OAuth")
+        conn
+        |> put_flash(:error, "Please log in with Google first before connecting HubSpot")
+        |> redirect(to: "/")
+
+      user_id ->
+        Logger.info("Storing HubSpot credential for user #{user_id}")
+        store_hubspot_credential(conn, user_id, token_response)
+    end
+  end
+
+  defp store_hubspot_credential(conn, user_id, token_response) do
+    Logger.info("Token response keys: #{inspect(Map.keys(token_response))}")
+
+    attrs = %{
+      provider: "hubspot",
+      access_token: token_response["access_token"],
+      refresh_token: token_response["refresh_token"],
+      expires_at: calculate_expires_at(token_response["expires_in"])
+    }
+
+    Logger.info("Credential attrs: #{inspect(attrs, charlists: :as_lists)}")
+
+    case Accounts.get_user(user_id) do
+      nil ->
+        Logger.error("User #{user_id} not found in database")
+        conn
+        |> put_flash(:error, "User not found")
+        |> redirect(to: "/")
+
+      user ->
+        Logger.info("Found user: #{user.email}")
+
+        case Accounts.store_credential(user, attrs) do
+          {:ok, credential} ->
+            Logger.info("Successfully stored HubSpot credential #{credential.id}")
+            {:ok, _jobs} = enqueue_sync_jobs(user, "hubspot")
+
+            conn
+            |> put_flash(:info, "Successfully connected HubSpot!")
+            |> redirect(to: "/")
+
+          {:error, changeset} ->
+            Logger.error("Failed to store HubSpot credential: #{inspect(changeset.errors)}")
+
+            conn
+            |> put_flash(:error, "Failed to save HubSpot connection")
+            |> redirect(to: "/")
+        end
+    end
+  end
+
+  defp calculate_expires_at(expires_in) when is_integer(expires_in) do
+    DateTime.utc_now() |> DateTime.add(expires_in, :second)
+  end
+
+  defp calculate_expires_at(_), do: nil
+
+  defp generate_state do
+    :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
   end
 end
