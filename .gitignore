@@ -55,3 +55,6 @@ coverage.xml
 *_key
 client_secret_*.json
 *credentials*.json
+
+
+.clinerules
