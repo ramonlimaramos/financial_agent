@@ -1,0 +1,159 @@
+<div class="flex flex-col h-screen bg-gray-50 overflow-hidden">
+  <!-- Header -->
+  <div class="bg-white shadow-sm border-b border-gray-200 px-4 py-3 flex-shrink-0">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0">
+          <span class="text-white font-bold text-sm sm:text-base">FA</span>
+        </div>
+        <h1 class="text-lg sm:text-xl font-semibold text-gray-900">Financial Agent</h1>
+      </div>
+      <a href="/" class="text-xs sm:text-sm text-gray-600 hover:text-gray-900 flex-shrink-0">
+        Home
+      </a>
+    </div>
+  </div>
+  
+<!-- Messages Container -->
+  <div id="messages-container" class="flex-1 overflow-y-auto" phx-hook="AutoScroll">
+    <div class="max-w-4xl mx-auto py-4 sm:py-8 px-3 sm:px-4 space-y-4 sm:space-y-6">
+      <%= if Enum.empty?(@messages) and @current_assistant_message == "" do %>
+        <div class="text-center text-gray-500 mt-20">
+          <svg
+            class="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+            />
+          </svg>
+          <p class="mt-4 text-lg">Start a conversation</p>
+          <p class="text-sm mt-2">Ask me about your emails, contacts, or calendar</p>
+        </div>
+      <% end %>
+
+      <%= for message <- @messages do %>
+        <div class={"flex #{if message.role == :user, do: "justify-end", else: "justify-start"}"}>
+          <div class={"max-w-[85%] sm:max-w-3xl rounded-lg px-3 sm:px-4 py-2 sm:py-3 #{message_class(message.role)}"}>
+            <div class="flex items-start space-x-2">
+              <div class="flex-shrink-0">
+                <%= if message.role == :user do %>
+                  <div class="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+                    U
+                  </div>
+                <% else %>
+                  <div class="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+                    AI
+                  </div>
+                <% end %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-gray-900 whitespace-pre-wrap break-words">
+                  {message.content}
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                  {Calendar.strftime(message.inserted_at, "%I:%M %p")}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <%= if @streaming and @current_assistant_message != "" do %>
+        <div class="flex justify-start">
+          <div class="max-w-[85%] sm:max-w-3xl rounded-lg px-3 sm:px-4 py-2 sm:py-3 bg-white shadow-sm">
+            <div class="flex items-start space-x-2">
+              <div class="flex-shrink-0">
+                <div class="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+                  AI
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-gray-900 whitespace-pre-wrap break-words">
+                  {@current_assistant_message}
+                </div>
+                <div class="flex items-center mt-2">
+                  <div class="flex space-x-1">
+                    <div
+                      class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style="animation-delay: 0ms"
+                    >
+                    </div>
+                    <div
+                      class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style="animation-delay: 150ms"
+                    >
+                    </div>
+                    <div
+                      class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"
+                      style="animation-delay: 300ms"
+                    >
+                    </div>
+                  </div>
+                  <span class="ml-2 text-xs text-gray-500">Typing...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+  
+<!-- Input Area -->
+  <div class="bg-white border-t border-gray-200 p-3 sm:p-4 flex-shrink-0">
+    <div class="max-w-4xl mx-auto">
+      <form phx-submit="send_message" class="flex items-end space-x-2 sm:space-x-4">
+        <div class="flex-1">
+          <textarea
+            name="message"
+            value={@input}
+            phx-change="update_input"
+            rows="2"
+            class="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+            placeholder="Ask about your emails, contacts, or calendar..."
+            disabled={@streaming}
+          ><%= @input %></textarea>
+        </div>
+        <button
+          type="submit"
+          disabled={@streaming or String.trim(@input) == ""}
+          class="px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base bg-purple-600 text-white rounded-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+        >
+          <%= if @streaming do %>
+            <svg
+              class="animate-spin h-5 w-5"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              >
+              </circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              >
+              </path>
+            </svg>
+          <% else %>
+            Send
+          <% end %>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
