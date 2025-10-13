@@ -136,6 +136,11 @@ if config_env() == :prod do
     api_key: System.get_env("OPENAI_API_KEY"),
     embedding_model: System.get_env("OPENAI_EMBEDDING_MODEL") || "text-embedding-3-small",
     chat_model: System.get_env("OPENAI_CHAT_MODEL") || "gpt-4o"
+
+  # Configure Instructions system
+  config :financial_agent, :instructions,
+    gmail_monitor_interval_minutes:
+      String.to_integer(System.get_env("GMAIL_MONITOR_INTERVAL") || "2")
 end
 
 # Load environment variables for all environments
@@ -166,4 +171,9 @@ if config_env() in [:dev, :test] do
     api_key: System.get_env("OPENAI_API_KEY"),
     embedding_model: System.get_env("OPENAI_EMBEDDING_MODEL") || "text-embedding-3-small",
     chat_model: System.get_env("OPENAI_CHAT_MODEL") || "gpt-4o"
+
+  # Configure Instructions system for dev/test
+  config :financial_agent, :instructions,
+    gmail_monitor_interval_minutes:
+      String.to_integer(System.get_env("GMAIL_MONITOR_INTERVAL") || "2")
 end

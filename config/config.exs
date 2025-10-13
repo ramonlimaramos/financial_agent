@@ -77,10 +77,14 @@ config :ueberauth, Ueberauth,
 # Configure Oban for background jobs
 config :financial_agent, Oban,
   repo: FinancialAgent.Repo,
-  queues: [sync: 5, embeddings: 10],
+  queues: [sync: 5, embeddings: 10, events: 10, gmail_monitor: 3],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-    {Oban.Plugins.Cron, crontab: []}
+    {Oban.Plugins.Cron,
+     crontab: [
+       # Run Gmail monitor every 2 minutes (configurable via GMAIL_MONITOR_INTERVAL)
+       {"*/2 * * * *", FinancialAgent.Workers.GmailMonitorWorker}
+     ]}
   ]
 
 # Configure Cloak
