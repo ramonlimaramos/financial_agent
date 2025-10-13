@@ -129,4 +129,17 @@ defmodule FinancialAgent.Instructions do
     |> where([i], i.is_active == true)
     |> Repo.exists?()
   end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking instruction changes.
+
+  ## Examples
+
+      iex> change_instruction(instruction)
+      %Ecto.Changeset{data: %Instruction{}}
+  """
+  @spec change_instruction(Instruction.t(), map()) :: Ecto.Changeset.t()
+  def change_instruction(%Instruction{} = instruction, attrs \\ %{}) do
+    Instruction.changeset(instruction, attrs)
+  end
 end
