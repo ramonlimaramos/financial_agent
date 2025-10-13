@@ -6,6 +6,7 @@ defmodule FinancialAgent.Factory do
   use ExMachina.Ecto, repo: FinancialAgent.Repo
 
   alias FinancialAgent.Accounts.{User, Credential}
+  alias FinancialAgent.Instructions.Instruction
   alias FinancialAgent.RAG.Chunk
 
   def user_factory do
@@ -102,6 +103,47 @@ defmodule FinancialAgent.Factory do
     struct!(
       chunk_factory(),
       %{embedding: Pgvector.new(embedding)}
+    )
+  end
+
+  def instruction_factory do
+    %Instruction{
+      user: build(:user),
+      trigger_type: "new_email",
+      condition_text: "Email mentions pricing information",
+      action_text: "Send them our pricing document link",
+      is_active: true,
+      inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
+  end
+
+  def email_instruction_factory do
+    struct!(
+      instruction_factory(),
+      %{
+        trigger_type: "new_email",
+        condition_text: "Email from VIP client",
+        action_text: "Notify me immediately"
+      }
+    )
+  end
+
+  def contact_instruction_factory do
+    struct!(
+      instruction_factory(),
+      %{
+        trigger_type: "new_contact",
+        condition_text: "New contact from target company",
+        action_text: "Add to follow-up list"
+      }
+    )
+  end
+
+  def inactive_instruction_factory do
+    struct!(
+      instruction_factory(),
+      %{is_active: false}
     )
   end
 end
