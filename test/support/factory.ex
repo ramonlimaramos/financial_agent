@@ -6,7 +6,9 @@ defmodule FinancialAgent.Factory do
   use ExMachina.Ecto, repo: FinancialAgent.Repo
 
   alias FinancialAgent.Accounts.{User, Credential}
+  alias FinancialAgent.Instructions.Instruction
   alias FinancialAgent.RAG.Chunk
+  alias FinancialAgent.Tasks.{Task, TaskMessage}
 
   def user_factory do
     %User{
@@ -102,6 +104,96 @@ defmodule FinancialAgent.Factory do
     struct!(
       chunk_factory(),
       %{embedding: Pgvector.new(embedding)}
+    )
+  end
+
+  def instruction_factory do
+    %Instruction{
+      user: build(:user),
+      trigger_type: "new_email",
+      condition_text: "Email mentions pricing information",
+      action_text: "Send them our pricing document link",
+      is_active: true,
+      inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
+  end
+
+  def email_instruction_factory do
+    struct!(
+      instruction_factory(),
+      %{
+        trigger_type: "new_email",
+        condition_text: "Email from VIP client",
+        action_text: "Notify me immediately"
+      }
+    )
+  end
+
+  def contact_instruction_factory do
+    struct!(
+      instruction_factory(),
+      %{
+        trigger_type: "new_contact",
+        condition_text: "New contact from target company",
+        action_text: "Add to follow-up list"
+      }
+    )
+  end
+
+  def inactive_instruction_factory do
+    struct!(
+      instruction_factory(),
+      %{is_active: false}
+    )
+  end
+
+  def task_factory do
+    %Task{
+      user: build(:user),
+      title: "Complete task",
+      description: "Task description",
+      task_type: "schedule_meeting",
+      status: "pending",
+      context: %{},
+      inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
+  end
+
+  def in_progress_task_factory do
+    struct!(
+      task_factory(),
+      %{status: "in_progress"}
+    )
+  end
+
+  def completed_task_factory do
+    struct!(
+      task_factory(),
+      %{
+        status: "completed",
+        result: %{"success" => true},
+        completed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    )
+  end
+
+  def task_message_factory do
+    %TaskMessage{
+      task: build(:task),
+      role: "user",
+      content: "This is a test message",
+      metadata: %{},
+      inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
+  end
+
+  def agent_message_factory do
+    struct!(
+      task_message_factory(),
+      %{role: "agent"}
     )
   end
 end

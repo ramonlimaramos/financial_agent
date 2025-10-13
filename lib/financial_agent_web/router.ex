@@ -29,6 +29,20 @@ defmodule FinancialAgentWeb.Router do
     end
   end
 
+  # Instructions and Tasks routes
+  scope "/", FinancialAgentWeb do
+    pipe_through [:browser]
+
+    live_session :app, layout: {FinancialAgentWeb.Layouts, :app} do
+      live "/instructions", InstructionsLive.Index, :index
+      live "/instructions/new", InstructionsLive.Index, :new
+      live "/instructions/:id/edit", InstructionsLive.Index, :edit
+
+      live "/tasks", TasksLive.Index, :index
+      live "/tasks/:id", TasksLive.Show, :show
+    end
+  end
+
   # OAuth authentication routes
   scope "/auth", FinancialAgentWeb do
     pipe_through :browser
