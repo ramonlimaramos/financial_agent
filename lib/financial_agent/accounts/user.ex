@@ -22,6 +22,7 @@ defmodule FinancialAgent.Accounts.User do
 
     has_many :credentials, FinancialAgent.Accounts.Credential
     has_many :chunks, FinancialAgent.RAG.Chunk
+    has_many :conversations, FinancialAgent.Chat.Conversation
 
     timestamps(type: :utc_datetime)
   end
