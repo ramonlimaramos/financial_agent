@@ -20,6 +20,15 @@ defmodule FinancialAgentWeb.Router do
     get "/", PageController, :home
   end
 
+  # Chat routes with minimal layout
+  scope "/", FinancialAgentWeb do
+    pipe_through [:browser]
+
+    live_session :chat, layout: {FinancialAgentWeb.Layouts, :chat} do
+      live "/chat", ChatLive
+    end
+  end
+
   # OAuth authentication routes
   scope "/auth", FinancialAgentWeb do
     pipe_through :browser

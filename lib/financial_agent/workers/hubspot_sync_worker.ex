@@ -40,7 +40,10 @@ defmodule FinancialAgent.Workers.HubSpotSyncWorker do
          {:ok, contacts} <- fetch_contacts(credential, limit, max_pages),
          {:ok, chunks} <- store_contacts(user_id, contacts),
          {:ok, _jobs} <- enqueue_embedding_jobs(chunks) do
-      Logger.info("HubSpot sync completed for user #{user_id}. Synced #{length(contacts)} contacts.")
+      Logger.info(
+        "HubSpot sync completed for user #{user_id}. Synced #{length(contacts)} contacts."
+      )
+
       {:ok, %{synced_count: length(contacts), chunk_count: length(chunks)}}
     else
       {:error, :no_credential} ->
@@ -68,7 +71,8 @@ defmodule FinancialAgent.Workers.HubSpotSyncWorker do
     fetch_contacts_recursive(client, limit, max_pages, [], nil, 0)
   end
 
-  defp fetch_contacts_recursive(_client, _limit, max_pages, acc, _offset, page) when page >= max_pages do
+  defp fetch_contacts_recursive(_client, _limit, max_pages, acc, _offset, page)
+       when page >= max_pages do
     {:ok, acc}
   end
 
@@ -96,17 +100,20 @@ defmodule FinancialAgent.Workers.HubSpotSyncWorker do
   end
 
   defp store_contacts(user_id, contacts) do
-    chunks = Enum.map(contacts, fn contact ->
-      attrs = build_chunk_attrs(user_id, contact)
+    chunks =
+      Enum.map(contacts, fn contact ->
+        attrs = build_chunk_attrs(user_id, contact)
 
-      case RAG.create_chunk(attrs) do
-        {:ok, chunk} -> chunk
-        {:error, changeset} ->
-          Logger.error("Failed to create chunk: #{inspect(changeset.errors)}")
-          nil
-      end
-    end)
-    |> Enum.reject(&is_nil/1)
+        case RAG.create_chunk(attrs) do
+          {:ok, chunk} ->
+            chunk
+
+          {:error, changeset} ->
+            Logger.error("Failed to create chunk: #{inspect(changeset.errors)}")
+            nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
 
     {:ok, chunks}
   end
@@ -165,15 +172,16 @@ defmodule FinancialAgent.Workers.HubSpotSyncWorker do
   end
 
   defp enqueue_embedding_jobs(chunks) do
-    jobs = Enum.map(chunks, fn chunk ->
-      EmbeddingWorker.new(%{chunk_id: chunk.id})
-      |> Oban.insert()
-    end)
+    jobs =
+      Enum.map(chunks, fn chunk ->
+        EmbeddingWorker.new(%{chunk_id: chunk.id})
+        |> Oban.insert()
+      end)
 
     case Enum.split_with(jobs, fn
-      {:ok, _job} -> true
-      {:error, _reason} -> false
-    end) do
+           {:ok, _job} -> true
+           {:error, _reason} -> false
+         end) do
       {successful, []} ->
         {:ok, successful}
 

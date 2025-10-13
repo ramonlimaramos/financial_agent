@@ -41,7 +41,7 @@ defmodule FinancialAgent.RAG.Chunk do
     chunk
     |> cast(attrs, [:user_id, :content, :source, :source_id, :embedding, :metadata])
     |> validate_required([:user_id, :content, :source, :source_id])
-    |> validate_inclusion(:source, ["gmail", "hubspot"])
+    |> validate_inclusion(:source, ["gmail", "hubspot", "calendar"])
     |> unique_constraint([:user_id, :source, :source_id])
     |> foreign_key_constraint(:user_id)
   end

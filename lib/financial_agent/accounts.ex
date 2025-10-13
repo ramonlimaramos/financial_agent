@@ -107,7 +107,8 @@ defmodule FinancialAgent.Accounts do
   @doc """
   Updates a credential.
   """
-  @spec update_credential(Credential.t(), map()) :: {:ok, Credential.t()} | {:error, Ecto.Changeset.t()}
+  @spec update_credential(Credential.t(), map()) ::
+          {:ok, Credential.t()} | {:error, Ecto.Changeset.t()}
   def update_credential(%Credential{} = credential, attrs) do
     credential
     |> Credential.changeset(attrs)

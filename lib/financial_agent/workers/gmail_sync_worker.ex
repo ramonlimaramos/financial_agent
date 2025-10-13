@@ -41,7 +41,10 @@ defmodule FinancialAgent.Workers.GmailSyncWorker do
          {:ok, messages} <- fetch_messages(credential, max_messages, days_back),
          {:ok, chunks} <- store_messages(user_id, messages),
          {:ok, _jobs} <- enqueue_embedding_jobs(chunks) do
-      Logger.info("Gmail sync completed for user #{user_id}. Synced #{length(messages)} messages.")
+      Logger.info(
+        "Gmail sync completed for user #{user_id}. Synced #{length(messages)} messages."
+      )
+
       {:ok, %{synced_count: length(messages), chunk_count: length(chunks)}}
     else
       {:error, :no_credential} ->
@@ -77,13 +80,14 @@ defmodule FinancialAgent.Workers.GmailSyncWorker do
     case GmailClient.list_messages(client, q: query, maxResults: max_messages) do
       {:ok, %{"messages" => message_list}} when is_list(message_list) ->
         # Fetch full details for each message
-        messages = Enum.map(message_list, fn %{"id" => message_id} ->
-          case GmailClient.get_message(client, message_id) do
-            {:ok, message} -> message
-            {:error, _reason} -> nil
-          end
-        end)
-        |> Enum.reject(&is_nil/1)
+        messages =
+          Enum.map(message_list, fn %{"id" => message_id} ->
+            case GmailClient.get_message(client, message_id) do
+              {:ok, message} -> message
+              {:error, _reason} -> nil
+            end
+          end)
+          |> Enum.reject(&is_nil/1)
 
         {:ok, messages}
 
@@ -97,17 +101,20 @@ defmodule FinancialAgent.Workers.GmailSyncWorker do
   end
 
   defp store_messages(user_id, messages) do
-    chunks = Enum.map(messages, fn message ->
-      attrs = build_chunk_attrs(user_id, message)
+    chunks =
+      Enum.map(messages, fn message ->
+        attrs = build_chunk_attrs(user_id, message)
 
-      case RAG.create_chunk(attrs) do
-        {:ok, chunk} -> chunk
-        {:error, changeset} ->
-          Logger.error("Failed to create chunk: #{inspect(changeset.errors)}")
-          nil
-      end
-    end)
-    |> Enum.reject(&is_nil/1)
+        case RAG.create_chunk(attrs) do
+          {:ok, chunk} ->
+            chunk
+
+          {:error, changeset} ->
+            Logger.error("Failed to create chunk: #{inspect(changeset.errors)}")
+            nil
+        end
+      end)
+      |> Enum.reject(&is_nil/1)
 
     {:ok, chunks}
   end
@@ -157,15 +164,16 @@ defmodule FinancialAgent.Workers.GmailSyncWorker do
   end
 
   defp enqueue_embedding_jobs(chunks) do
-    jobs = Enum.map(chunks, fn chunk ->
-      EmbeddingWorker.new(%{chunk_id: chunk.id})
-      |> Oban.insert()
-    end)
+    jobs =
+      Enum.map(chunks, fn chunk ->
+        EmbeddingWorker.new(%{chunk_id: chunk.id})
+        |> Oban.insert()
+      end)
 
     case Enum.split_with(jobs, fn
-      {:ok, _job} -> true
-      {:error, _reason} -> false
-    end) do
+           {:ok, _job} -> true
+           {:error, _reason} -> false
+         end) do
       {successful, []} ->
         {:ok, successful}
 

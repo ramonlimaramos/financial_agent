@@ -130,6 +130,12 @@ if config_env() == :prod do
   config :openai,
     api_key: System.get_env("OPENAI_API_KEY"),
     organization_key: System.get_env("OPENAI_ORG_KEY")
+
+  # Configure FinancialAgent OpenAI settings
+  config :financial_agent, :openai,
+    api_key: System.get_env("OPENAI_API_KEY"),
+    embedding_model: System.get_env("OPENAI_EMBEDDING_MODEL") || "text-embedding-3-small",
+    chat_model: System.get_env("OPENAI_CHAT_MODEL") || "gpt-4o"
 end
 
 # Load environment variables for all environments
@@ -154,4 +160,10 @@ if config_env() in [:dev, :test] do
   config :openai,
     api_key: System.get_env("OPENAI_API_KEY"),
     organization_key: System.get_env("OPENAI_ORG_KEY")
+
+  # Configure FinancialAgent OpenAI settings
+  config :financial_agent, :openai,
+    api_key: System.get_env("OPENAI_API_KEY"),
+    embedding_model: System.get_env("OPENAI_EMBEDDING_MODEL") || "text-embedding-3-small",
+    chat_model: System.get_env("OPENAI_CHAT_MODEL") || "gpt-4o"
 end

@@ -113,14 +113,21 @@ defmodule FinancialAgent.AccountsTest do
 
       {:ok, credential} = Accounts.store_credential(user, attrs)
 
-      # Query the database directly to verify encryption
-      result =
-        Ecto.Query.from(c in "credentials", where: c.id == ^credential.id, select: c)
-        |> Repo.one()
+      # Query the database using Ecto.Query with raw SQL to bypass decryption
+      query = """
+      SELECT access_token_hash, refresh_token_hash
+      FROM credentials
+      WHERE id = $1::uuid
+      """
+
+      # Convert UUID to binary format for PostgreSQL
+      {:ok, uuid_binary} = Ecto.UUID.dump(credential.id)
+      result = Ecto.Adapters.SQL.query!(Repo, query, [uuid_binary])
+      [[access_token_hash, refresh_token_hash]] = result.rows
 
       # The hash fields should not contain the plain text
-      refute result.access_token_hash =~ "my_secret_token"
-      refute result.refresh_token_hash =~ "my_secret_refresh"
+      refute access_token_hash =~ "my_secret_token"
+      refute refresh_token_hash =~ "my_secret_refresh"
 
       # But the struct should have decrypted values
       assert credential.access_token == "my_secret_token"
