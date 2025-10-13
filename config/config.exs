@@ -77,7 +77,7 @@ config :ueberauth, Ueberauth,
 # Configure Oban for background jobs
 config :financial_agent, Oban,
   repo: FinancialAgent.Repo,
-  queues: [sync: 5, embeddings: 10, events: 10, gmail_monitor: 3],
+  queues: [sync: 5, embeddings: 10, events: 10, gmail_monitor: 3, tasks: 5],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Cron,

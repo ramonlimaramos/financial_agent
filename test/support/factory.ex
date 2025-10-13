@@ -8,6 +8,7 @@ defmodule FinancialAgent.Factory do
   alias FinancialAgent.Accounts.{User, Credential}
   alias FinancialAgent.Instructions.Instruction
   alias FinancialAgent.RAG.Chunk
+  alias FinancialAgent.Tasks.{Task, TaskMessage}
 
   def user_factory do
     %User{
@@ -144,6 +145,55 @@ defmodule FinancialAgent.Factory do
     struct!(
       instruction_factory(),
       %{is_active: false}
+    )
+  end
+
+  def task_factory do
+    %Task{
+      user: build(:user),
+      title: "Complete task",
+      description: "Task description",
+      task_type: "schedule_meeting",
+      status: "pending",
+      context: %{},
+      inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
+  end
+
+  def in_progress_task_factory do
+    struct!(
+      task_factory(),
+      %{status: "in_progress"}
+    )
+  end
+
+  def completed_task_factory do
+    struct!(
+      task_factory(),
+      %{
+        status: "completed",
+        result: %{"success" => true},
+        completed_at: DateTime.utc_now() |> DateTime.truncate(:second)
+      }
+    )
+  end
+
+  def task_message_factory do
+    %TaskMessage{
+      task: build(:task),
+      role: "user",
+      content: "This is a test message",
+      metadata: %{},
+      inserted_at: DateTime.utc_now() |> DateTime.truncate(:second),
+      updated_at: DateTime.utc_now() |> DateTime.truncate(:second)
+    }
+  end
+
+  def agent_message_factory do
+    struct!(
+      task_message_factory(),
+      %{role: "agent"}
     )
   end
 end
