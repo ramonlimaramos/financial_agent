@@ -27,13 +27,13 @@
               </div>
               <div class="flex items-center space-x-4">
                 <span class="text-sm text-gray-600">{@user.email}</span>
-                <a
-                  href="/auth/logout"
-                  data-method="delete"
+                <.link
+                  href={~p"/auth/logout"}
+                  method="delete"
                   class="text-sm text-gray-600 hover:text-gray-900"
                 >
                   Logout
-                </a>
+                </.link>
               </div>
             </div>
           </div>
