@@ -68,7 +68,7 @@ config :ueberauth, Ueberauth,
       {Ueberauth.Strategy.Google,
        [
          default_scope:
-           "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly",
+           "email profile https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/calendar",
          hd: nil
        ]}
     # HubSpot uses custom OAuth implementation, not Ueberauth
